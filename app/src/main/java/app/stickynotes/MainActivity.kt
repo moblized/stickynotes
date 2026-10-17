@@ -1,0 +1,54 @@
+package app.stickynotes
+
+import android.content.Intent
+import android.graphics.Color
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.lifecycle.ViewModelProvider
+import app.stickynotes.ui.AppRoot
+import app.stickynotes.ui.MainViewModel
+
+class MainActivity : ComponentActivity() {
+
+    private val viewModel: MainViewModel by lazy { ViewModelProvider(this)[MainViewModel::class.java] }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        if (savedInstanceState == null) handleIntent(intent)
+        setContent {
+            AppRoot(
+                vm = viewModel,
+                onDarkThemeChanged = { dark -> applySystemBars(dark) },
+            )
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent?) {
+        if (intent?.action != ACTION_OPEN_NOTE) return
+        val id = intent.getLongExtra(EXTRA_NOTE_ID, -1L)
+        if (id >= 0) viewModel.openFromNotification(id)
+    }
+
+    private fun applySystemBars(dark: Boolean) {
+        val style = if (dark) {
+            SystemBarStyle.dark(Color.TRANSPARENT)
+        } else {
+            SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
+        }
+        enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
+    }
+
+    companion object {
+        const val ACTION_OPEN_NOTE = "app.stickynotes.action.OPEN_NOTE"
+        const val EXTRA_NOTE_ID = "note_id"
+    }
+}
