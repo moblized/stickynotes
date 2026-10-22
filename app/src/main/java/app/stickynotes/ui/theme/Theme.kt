@@ -148,10 +148,23 @@ private val DarkColors = darkColorScheme(
     outlineVariant = Color(0xFF4D4639),
 )
 
+/** Dark scheme with true-black backgrounds; raised surfaces stay just off-black so they're still visible. */
+private val PureBlackColors = DarkColors.copy(
+    background = Color.Black,
+    surface = Color.Black,
+    surfaceContainerLowest = Color.Black,
+    surfaceContainerLow = Color(0xFF0B0B0A),
+    surfaceContainer = Color(0xFF121211),
+    surfaceContainerHigh = Color(0xFF1A1A18),
+    surfaceContainerHighest = Color(0xFF232320),
+    surfaceVariant = Color(0xFF2A2824),
+)
+
 @Composable
 fun StickyTheme(
     darkTheme: Boolean,
     noteFont: NoteFont,
+    pureBlack: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     CompositionLocalProvider(
@@ -159,7 +172,11 @@ fun StickyTheme(
         LocalNoteTypography provides NoteTypography.from(noteFont),
     ) {
         MaterialTheme(
-            colorScheme = if (darkTheme) DarkColors else LightColors,
+            colorScheme = when {
+                darkTheme && pureBlack -> PureBlackColors
+                darkTheme -> DarkColors
+                else -> LightColors
+            },
             content = content,
         )
     }

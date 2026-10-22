@@ -47,6 +47,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 fun AppRoot(vm: MainViewModel, onDarkThemeChanged: (Boolean) -> Unit) {
     val themeMode by vm.settings.theme.collectAsStateWithLifecycle()
     val fontName by vm.settings.font.collectAsStateWithLifecycle()
+    val pureBlack by vm.settings.pureBlack.collectAsStateWithLifecycle()
     val dark = when (themeMode) {
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
         ThemeMode.LIGHT -> false
@@ -54,7 +55,7 @@ fun AppRoot(vm: MainViewModel, onDarkThemeChanged: (Boolean) -> Unit) {
     }
     LaunchedEffect(dark) { onDarkThemeChanged(dark) }
 
-    StickyTheme(darkTheme = dark, noteFont = NoteFont.of(fontName)) {
+    StickyTheme(darkTheme = dark, noteFont = NoteFont.of(fontName), pureBlack = pureBlack) {
         val snackbarHostState = remember { SnackbarHostState() }
         val undoSeconds by vm.settings.undoSeconds.collectAsStateWithLifecycle()
         val undoMillis by rememberUpdatedState(undoSeconds * 1000L)

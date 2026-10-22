@@ -26,6 +26,10 @@ class Settings(context: Context) {
     private val _layout = MutableStateFlow(readEnum(KEY_LAYOUT, NotesLayout.GRID))
     val layout: StateFlow<NotesLayout> = _layout.asStateFlow()
 
+    /** True-black background whenever the dark theme is showing (OLED friendly). */
+    private val _pureBlack = MutableStateFlow(prefs.getBoolean(KEY_PURE_BLACK, false))
+    val pureBlack: StateFlow<Boolean> = _pureBlack.asStateFlow()
+
     fun setTheme(mode: ThemeMode) {
         prefs.edit().putString(KEY_THEME, mode.name).apply()
         _theme.value = mode
@@ -40,6 +44,11 @@ class Settings(context: Context) {
         val clamped = seconds.coerceIn(MIN_UNDO_SECONDS, MAX_UNDO_SECONDS)
         prefs.edit().putInt(KEY_UNDO, clamped).apply()
         _undoSeconds.value = clamped
+    }
+
+    fun setPureBlack(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_PURE_BLACK, enabled).apply()
+        _pureBlack.value = enabled
     }
 
     fun setLayout(layout: NotesLayout) {
@@ -61,5 +70,6 @@ class Settings(context: Context) {
         private const val KEY_FONT = "font"
         private const val KEY_UNDO = "undo_seconds"
         private const val KEY_LAYOUT = "layout"
+        private const val KEY_PURE_BLACK = "pure_black"
     }
 }

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Menu
@@ -22,6 +23,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -52,6 +54,7 @@ fun SettingsScreen(vm: MainViewModel, onOpenDrawer: () -> Unit) {
     val fontName by vm.settings.font.collectAsStateWithLifecycle()
     val undoSeconds by vm.settings.undoSeconds.collectAsStateWithLifecycle()
     val layout by vm.settings.layout.collectAsStateWithLifecycle()
+    val pureBlack by vm.settings.pureBlack.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val version = remember {
         runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: ""
@@ -85,6 +88,32 @@ fun SettingsScreen(vm: MainViewModel, onOpenDrawer: () -> Unit) {
                     selected = theme == mode,
                     onClick = { vm.setTheme(mode) },
                 ) { Text(mode.label, style = MaterialTheme.typography.bodyLarge) }
+            }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .toggleable(
+                        value = pureBlack,
+                        role = Role.Switch,
+                        onValueChange = { vm.settings.setPureBlack(it) },
+                    )
+                    .padding(horizontal = 24.dp, vertical = 10.dp),
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text("Pure black", style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        text = if (theme == ThemeMode.LIGHT) {
+                            "Black background in dark mode. Switch the theme to Dark or Follow system to see it."
+                        } else {
+                            "Black background in dark mode. Saves battery on OLED screens."
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Spacer(Modifier.width(12.dp))
+                Switch(checked = pureBlack, onCheckedChange = null)
             }
 
             Divider()

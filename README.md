@@ -23,7 +23,7 @@ Every push to `main` builds a signed APK on GitHub Actions and publishes it as a
 - Send a note as text to any app; make a copy
 - Pin and delete buttons right on each note
 - Undo bar after delete or archive, duration adjustable in Settings (default 5 seconds)
-- Light, dark or follow-system theme
+- Light, dark or follow-system theme, with an optional pure black dark mode
 
 ## Build it yourself
 
