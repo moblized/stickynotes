@@ -22,6 +22,7 @@ Every push to `main` builds a signed APK on GitHub Actions and publishes it as a
 - Image attachments (photo picker, full-screen viewer with pinch zoom)
 - Send a note as text to any app; make a copy
 - Pin and delete buttons right on each note
+- "Quick note" icon and long-press shortcuts (New note, New list) that open straight into a blank note
 - Undo bar after delete or archive, duration adjustable in Settings (default 5 seconds)
 - Light, dark or follow-system theme, with an optional pure black dark mode
 

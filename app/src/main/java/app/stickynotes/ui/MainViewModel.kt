@@ -145,6 +145,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** From the Quick note icon or a home-screen shortcut: go to Notes and start a blank note. */
+    fun newNoteFromShortcut(isChecklist: Boolean) {
+        if (root != Root.Section(NoteSection.Notes)) navigate(Root.Section(NoteSection.Notes))
+        newNote(isChecklist)
+    }
+
     suspend fun loadNote(id: Long): Note? = repo.get(id)
 
     /** Closes the editor without saving, e.g. when its note no longer exists. */

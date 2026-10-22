@@ -33,9 +33,14 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleIntent(intent: Intent?) {
-        if (intent?.action != ACTION_OPEN_NOTE) return
-        val id = intent.getLongExtra(EXTRA_NOTE_ID, -1L)
-        if (id >= 0) viewModel.openFromNotification(id)
+        when (intent?.action) {
+            ACTION_OPEN_NOTE -> {
+                val id = intent.getLongExtra(EXTRA_NOTE_ID, -1L)
+                if (id >= 0) viewModel.openFromNotification(id)
+            }
+            ACTION_NEW_NOTE -> viewModel.newNoteFromShortcut(isChecklist = false)
+            ACTION_NEW_LIST -> viewModel.newNoteFromShortcut(isChecklist = true)
+        }
     }
 
     private fun applySystemBars(dark: Boolean) {
@@ -49,6 +54,8 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         const val ACTION_OPEN_NOTE = "app.stickynotes.action.OPEN_NOTE"
+        const val ACTION_NEW_NOTE = "app.stickynotes.action.NEW_NOTE"
+        const val ACTION_NEW_LIST = "app.stickynotes.action.NEW_LIST"
         const val EXTRA_NOTE_ID = "note_id"
     }
 }

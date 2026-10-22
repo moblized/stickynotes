@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Sticky Notes</string>
+    <string name="quick_note">Quick note</string>
+    <string name="shortcut_new_note">New note</string>
+    <string name="shortcut_new_list">New list</string>
     <string name="reminder_channel_name">Reminders</string>
     <string name="reminder_channel_description">Note reminders you set</string>
 </resources>

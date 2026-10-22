@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Long-press the app icon for these. Drag one to the home screen for a one-tap new note or list. -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:enabled="true"
+        android:icon="@mipmap/ic_quicknote"
+        android:shortcutId="new_note"
+        android:shortcutShortLabel="@string/shortcut_new_note">
+        <intent
+            android:action="app.stickynotes.action.NEW_NOTE"
+            android:targetClass="app.stickynotes.MainActivity"
+            android:targetPackage="app.stickynotes" />
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@mipmap/ic_quicklist"
+        android:shortcutId="new_list"
+        android:shortcutShortLabel="@string/shortcut_new_list">
+        <intent
+            android:action="app.stickynotes.action.NEW_LIST"
+            android:targetClass="app.stickynotes.MainActivity"
+            android:targetPackage="app.stickynotes" />
+    </shortcut>
+</shortcuts>
