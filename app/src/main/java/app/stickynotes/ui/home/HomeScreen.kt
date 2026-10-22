@@ -374,6 +374,8 @@ private fun LazyStaggeredGridItemScope.NoteItem(
                 imageStore = vm.imageStore,
                 lifted = isDragging,
                 onClick = { vm.openNote(note.id) },
+                onTogglePin = if (note.isArchived) null else ({ vm.togglePinned(note) }),
+                onDelete = { vm.deleteFromCard(note) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .then(

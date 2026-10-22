@@ -147,6 +147,9 @@ fun AppRoot(vm: MainViewModel, onDarkThemeChanged: (Boolean) -> Unit) {
                         imageStore = vm.imageStore,
                         elevated = false,
                         modifier = Modifier.fillMaxSize(),
+                        // Same buttons as the grid card, so the crumpled paper matches what was there.
+                        onTogglePin = if (job.note.isArchived) null else ({}),
+                        onDelete = {},
                     )
                 },
                 onFinished = vm::crumpleFinished,

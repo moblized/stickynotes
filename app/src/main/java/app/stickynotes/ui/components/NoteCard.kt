@@ -14,10 +14,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.outlined.Alarm
 import androidx.compose.material.icons.outlined.CheckBoxOutlineBlank
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
@@ -39,6 +43,8 @@ import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Density
@@ -95,6 +101,8 @@ fun NoteCard(
     elevated: Boolean = true,
     lifted: Boolean = false,
     onClick: (() -> Unit)? = null,
+    onTogglePin: (() -> Unit)? = null,
+    onDelete: (() -> Unit)? = null,
 ) {
     val dark = LocalDarkTheme.current
     val typo = LocalNoteTypography.current
@@ -174,12 +182,13 @@ fun NoteCard(
         ) {
             Column(Modifier.fillMaxWidth()) {
                 NoteCardImage(images, imageStore)
+                val hasActions = onTogglePin != null || onDelete != null
                 val hasContent = note.hasText() || note.reminderAt != null || labels.isNotEmpty()
                 if (hasContent || images.isEmpty()) {
                     Column(
                         Modifier
                             .fillMaxWidth()
-                            .padding(start = 14.dp, end = 14.dp, top = 14.dp, bottom = 16.dp),
+                            .padding(start = 14.dp, end = 14.dp, top = 14.dp, bottom = if (hasActions) 2.dp else 16.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
                         CardText(note, ink)
@@ -187,8 +196,46 @@ fun NoteCard(
                         if (labels.isNotEmpty()) LabelChips(labels, Modifier.padding(top = 2.dp))
                     }
                 }
+                if (hasActions) {
+                    // Pin and delete, kept clear of the curled corner.
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(start = 4.dp, end = 24.dp, top = 2.dp, bottom = 4.dp),
+                    ) {
+                        if (onTogglePin != null) {
+                            CardAction(
+                                icon = if (note.isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin,
+                                description = if (note.isPinned) "Unpin note" else "Pin note",
+                                tint = ink.copy(alpha = if (note.isPinned) 0.9f else 0.55f),
+                                onClick = onTogglePin,
+                            )
+                        }
+                        if (onDelete != null) {
+                            CardAction(
+                                icon = Icons.Outlined.Delete,
+                                description = "Delete note",
+                                tint = ink.copy(alpha = 0.55f),
+                                onClick = onDelete,
+                            )
+                        }
+                    }
+                }
             }
         }
+    }
+}
+
+/** A small round button on a card. Smaller than a normal icon button so the note stays the focus. */
+@Composable
+private fun CardAction(icon: ImageVector, description: String, tint: Color, onClick: () -> Unit) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .size(38.dp)
+            .clip(CircleShape)
+            .clickable(role = Role.Button, onClickLabel = description, onClick = onClick),
+    ) {
+        Icon(icon, contentDescription = description, tint = tint, modifier = Modifier.size(19.dp))
     }
 }
 

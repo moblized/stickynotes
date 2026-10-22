@@ -197,6 +197,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun deleteFromEditor(draft: Note) {
         if (editorNoteId != draft.id) return
         editorNoteId = null
+        crumple?.let { crumpleFinished(it) }
         _hiddenIds.update { it + draft.id }
         crumple = CrumpleJob(draft, cardBounds[draft.id])
         viewModelScope.launch { repo.saveContent(draft) }
@@ -227,6 +228,19 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         emit(if (archive) "Note archived" else "Note unarchived") {
             viewModelScope.launch { repo.setArchived(note.id, note.isArchived, note.isPinned) }
         }
+    }
+
+    fun togglePinned(note: Note) {
+        viewModelScope.launch { repo.setPinned(note.id, !note.isPinned) }
+    }
+
+    /** The trash button on a card: crumple the card where it is, then move it to Trash. */
+    fun deleteFromCard(note: Note) {
+        if (note.id in _hiddenIds.value) return
+        // Deleting another note mid-animation: send the first one straight to Trash.
+        crumple?.let { crumpleFinished(it) }
+        _hiddenIds.update { it + note.id }
+        crumple = CrumpleJob(note, cardBounds[note.id])
     }
 
     fun reorder(orderedIds: List<Long>) {
