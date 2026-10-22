@@ -151,6 +151,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         newNote(isChecklist)
     }
 
+    /** S Pen pulled out: start a blank note, unless one is already open. */
+    fun newNoteFromPen() {
+        if (editorNoteId != null) return
+        newNoteFromShortcut(isChecklist = false)
+    }
+
     suspend fun loadNote(id: Long): Note? = repo.get(id)
 
     /** Closes the editor without saving, e.g. when its note no longer exists. */

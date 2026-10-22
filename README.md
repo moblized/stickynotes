@@ -23,6 +23,7 @@ Every push to `main` builds a signed APK on GitHub Actions and publishes it as a
 - Send a note as text to any app; make a copy
 - Pin and delete buttons right on each note
 - "Quick note" icon and long-press shortcuts (New note, New list) that open straight into a blank note
+- S Pen helper (optional, Accessibility): pulling out the S Pen opens a new note, or Sticky Notes can open in place of Samsung Notes
 - Undo bar after delete or archive, duration adjustable in Settings (default 5 seconds)
 - Light, dark or follow-system theme, with an optional pure black dark mode
 

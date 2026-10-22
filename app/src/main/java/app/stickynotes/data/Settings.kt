@@ -9,6 +9,9 @@ enum class ThemeMode(val label: String) { SYSTEM("Follow system"), LIGHT("Light"
 
 enum class NotesLayout { GRID, LIST }
 
+/** The last time the phone said the S Pen came out or went back in. */
+data class PenEvent(val at: Long, val removed: Boolean)
+
 /** App settings, stored in SharedPreferences and exposed as StateFlows. */
 class Settings(context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences("settings", Context.MODE_PRIVATE)
@@ -29,6 +32,37 @@ class Settings(context: Context) {
     /** True-black background whenever the dark theme is showing (OLED friendly). */
     private val _pureBlack = MutableStateFlow(prefs.getBoolean(KEY_PURE_BLACK, false))
     val pureBlack: StateFlow<Boolean> = _pureBlack.asStateFlow()
+
+    /** Open a new note when the S Pen is pulled out (needs the S Pen helper switched on). */
+    private val _openOnPenRemoved = MutableStateFlow(prefs.getBoolean(KEY_PEN_OPEN, true))
+    val openOnPenRemoved: StateFlow<Boolean> = _openOnPenRemoved.asStateFlow()
+
+    /** Whenever Samsung Notes opens, close it and open a new sticky note instead. */
+    private val _replaceSamsungNotes = MutableStateFlow(prefs.getBoolean(KEY_REPLACE_SAMSUNG_NOTES, false))
+    val replaceSamsungNotes: StateFlow<Boolean> = _replaceSamsungNotes.asStateFlow()
+
+    private val _lastPenEvent = MutableStateFlow(
+        prefs.getLong(KEY_PEN_EVENT_AT, 0L).takeIf { it > 0 }?.let {
+            PenEvent(it, prefs.getBoolean(KEY_PEN_EVENT_REMOVED, true))
+        },
+    )
+    val lastPenEvent: StateFlow<PenEvent?> = _lastPenEvent.asStateFlow()
+
+    fun setOpenOnPenRemoved(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_PEN_OPEN, enabled).apply()
+        _openOnPenRemoved.value = enabled
+    }
+
+    fun setReplaceSamsungNotes(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_REPLACE_SAMSUNG_NOTES, enabled).apply()
+        _replaceSamsungNotes.value = enabled
+    }
+
+    fun recordPenEvent(removed: Boolean) {
+        val event = PenEvent(System.currentTimeMillis(), removed)
+        prefs.edit().putLong(KEY_PEN_EVENT_AT, event.at).putBoolean(KEY_PEN_EVENT_REMOVED, removed).apply()
+        _lastPenEvent.value = event
+    }
 
     fun setTheme(mode: ThemeMode) {
         prefs.edit().putString(KEY_THEME, mode.name).apply()
@@ -71,5 +105,9 @@ class Settings(context: Context) {
         private const val KEY_UNDO = "undo_seconds"
         private const val KEY_LAYOUT = "layout"
         private const val KEY_PURE_BLACK = "pure_black"
+        private const val KEY_PEN_OPEN = "pen_open_on_remove"
+        private const val KEY_REPLACE_SAMSUNG_NOTES = "replace_samsung_notes"
+        private const val KEY_PEN_EVENT_AT = "pen_event_at"
+        private const val KEY_PEN_EVENT_REMOVED = "pen_event_removed"
     }
 }

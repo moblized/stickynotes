@@ -40,6 +40,7 @@ class MainActivity : ComponentActivity() {
             }
             ACTION_NEW_NOTE -> viewModel.newNoteFromShortcut(isChecklist = false)
             ACTION_NEW_LIST -> viewModel.newNoteFromShortcut(isChecklist = true)
+            ACTION_PEN_NOTE -> viewModel.newNoteFromPen()
         }
     }
 
@@ -56,6 +57,7 @@ class MainActivity : ComponentActivity() {
         const val ACTION_OPEN_NOTE = "app.stickynotes.action.OPEN_NOTE"
         const val ACTION_NEW_NOTE = "app.stickynotes.action.NEW_NOTE"
         const val ACTION_NEW_LIST = "app.stickynotes.action.NEW_LIST"
+        const val ACTION_PEN_NOTE = "app.stickynotes.action.PEN_NOTE"
         const val EXTRA_NOTE_ID = "note_id"
     }
 }

@@ -1,5 +1,7 @@
 package app.stickynotes.ui.settings
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,11 +17,13 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Menu
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
@@ -30,6 +34,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -39,11 +44,15 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.stickynotes.data.NotesLayout
 import app.stickynotes.data.Settings
 import app.stickynotes.data.ThemeMode
+import app.stickynotes.spen.PenHelperService
 import app.stickynotes.ui.MainViewModel
+import app.stickynotes.ui.components.formatReminder
 import app.stickynotes.ui.theme.NoteFont
 import kotlin.math.roundToInt
 
@@ -166,6 +175,10 @@ fun SettingsScreen(vm: MainViewModel, onOpenDrawer: () -> Unit) {
             }
 
             Divider()
+            SectionTitle("S Pen")
+            PenSection(vm)
+
+            Divider()
             SectionTitle("About")
             Text(
                 text = "Sticky Notes $version\nSwipe a note to archive it. Long-press and drag to reorder. " +
@@ -175,6 +188,131 @@ fun SettingsScreen(vm: MainViewModel, onOpenDrawer: () -> Unit) {
                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp),
             )
         }
+    }
+}
+
+/** Switches for opening Sticky Notes from the S Pen, plus a live "last seen" line to check it works. */
+@Composable
+private fun PenSection(vm: MainViewModel) {
+    val context = LocalContext.current
+    var helperOn by remember { mutableStateOf(PenHelperService.isEnabled(context)) }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { helperOn = PenHelperService.isEnabled(context) }
+    val openOnRemove by vm.settings.openOnPenRemoved.collectAsStateWithLifecycle()
+    val replaceSamsungNotes by vm.settings.replaceSamsungNotes.collectAsStateWithLifecycle()
+    val lastEvent by vm.settings.lastPenEvent.collectAsStateWithLifecycle()
+
+    Column(Modifier.padding(horizontal = 24.dp)) {
+        if (helperOn) {
+            Text(
+                text = "S Pen helper is on.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        } else {
+            Text(
+                text = "To open Sticky Notes when you pull out the S Pen, turn on \"Sticky Notes S Pen helper\" " +
+                    "in Accessibility settings (under Installed apps). It only checks which app is open, " +
+                    "never what's on your screen.",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Spacer(Modifier.height(10.dp))
+            Row {
+                Button(onClick = {
+                    runCatching {
+                        context.startActivity(
+                            Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                        )
+                    }
+                }) { Text("Accessibility settings") }
+                Spacer(Modifier.width(8.dp))
+                OutlinedButton(onClick = {
+                    runCatching {
+                        context.startActivity(
+                            Intent(
+                                android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                Uri.fromParts("package", context.packageName, null),
+                            ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                        )
+                    }
+                }) { Text("App info") }
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "Can't switch it on? Open App info, tap ⋮ at the top right, choose " +
+                    "\"Allow restricted settings\", then try again.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+
+    SwitchRow(
+        title = "Open a new note when the S Pen is removed",
+        detail = "Also set Samsung's Settings → Advanced features → S Pen → When S Pen is removed " +
+            "to \"Do nothing\", so its own menu doesn't pop up on top.",
+        checked = openOnRemove,
+        enabled = helperOn,
+        onCheckedChange = { vm.settings.setOpenOnPenRemoved(it) },
+    )
+    SwitchRow(
+        title = "Open instead of Samsung Notes",
+        detail = "Whenever Samsung Notes opens, it closes and a new sticky note opens instead. " +
+            "Use this if pulling out the pen doesn't show up below: set Samsung's " +
+            "\"When S Pen is removed\" to \"Create note\".",
+        checked = replaceSamsungNotes,
+        enabled = helperOn,
+        onCheckedChange = { vm.settings.setReplaceSamsungNotes(it) },
+    )
+
+    val event = lastEvent
+    Text(
+        text = when {
+            event == null && helperOn -> "No S Pen activity seen yet. Pull the pen out to test."
+            event == null -> "No S Pen activity seen yet."
+            event.removed -> "Last seen: S Pen removed, ${formatReminder(event.at)}"
+            else -> "Last seen: S Pen put back, ${formatReminder(event.at)}"
+        },
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 24.dp, vertical = 6.dp),
+    )
+}
+
+@Composable
+private fun SwitchRow(
+    title: String,
+    detail: String,
+    checked: Boolean,
+    enabled: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .toggleable(
+                value = checked,
+                enabled = enabled,
+                role = Role.Switch,
+                onValueChange = onCheckedChange,
+            )
+            .padding(horizontal = 24.dp, vertical = 10.dp),
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
+            )
+            Text(
+                text = detail,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Spacer(Modifier.width(12.dp))
+        Switch(checked = checked, onCheckedChange = null, enabled = enabled)
     }
 }
 
