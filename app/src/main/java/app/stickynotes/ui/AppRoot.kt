@@ -32,8 +32,6 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.stickynotes.data.ThemeMode
 import app.stickynotes.ui.components.AppDrawer
-import app.stickynotes.ui.components.NoteCard
-import app.stickynotes.ui.crumple.CrumpleOverlay
 import app.stickynotes.ui.editor.EditorScreen
 import app.stickynotes.ui.home.HomeScreen
 import app.stickynotes.ui.labels.EditLabelsScreen
@@ -79,8 +77,6 @@ fun AppRoot(vm: MainViewModel, onDarkThemeChanged: (Boolean) -> Unit) {
         val scope = rememberCoroutineScope()
         val focusManager = LocalFocusManager.current
         val labels by vm.labels.collectAsStateWithLifecycle()
-        val labelsByNote by vm.labelsByNote.collectAsStateWithLifecycle()
-        val imagesByNote by vm.imagesByNote.collectAsStateWithLifecycle()
         val editorId = vm.editorNoteId
         val openDrawer: () -> Unit = {
             focusManager.clearFocus()
@@ -136,24 +132,6 @@ fun AppRoot(vm: MainViewModel, onDarkThemeChanged: (Boolean) -> Unit) {
                 val id = editorId ?: lastEditorId
                 if (id != null) key(id) { EditorScreen(vm, id) }
             }
-
-            CrumpleOverlay(
-                job = vm.crumple,
-                cardContent = { job ->
-                    NoteCard(
-                        note = job.note,
-                        labels = labelsByNote[job.note.id].orEmpty(),
-                        images = imagesByNote[job.note.id].orEmpty(),
-                        imageStore = vm.imageStore,
-                        elevated = false,
-                        modifier = Modifier.fillMaxSize(),
-                        // Same buttons as the grid card, so the crumpled paper matches what was there.
-                        onTogglePin = if (job.note.isArchived) null else ({}),
-                        onDelete = {},
-                    )
-                },
-                onFinished = vm::crumpleFinished,
-            )
         }
     }
 }

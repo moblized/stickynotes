@@ -44,7 +44,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -56,8 +55,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.layout.boundsInRoot
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.input.ImeAction
@@ -358,9 +355,6 @@ private fun LazyStaggeredGridItemScope.NoteItem(
     onDragStarted: () -> Unit,
     onDragStopped: () -> Unit,
 ) {
-    DisposableEffect(note.id) {
-        onDispose { vm.cardBounds.remove(note.id) }
-    }
     ReorderableItem(reorderState, key = note.id, enabled = canReorder) { isDragging ->
         SwipeToArchive(
             isArchived = note.isArchived,
@@ -387,8 +381,7 @@ private fun LazyStaggeredGridItemScope.NoteItem(
                         } else {
                             Modifier
                         },
-                    )
-                    .onGloballyPositioned { vm.cardBounds[note.id] = it.boundsInRoot() },
+                    ),
             )
         }
     }

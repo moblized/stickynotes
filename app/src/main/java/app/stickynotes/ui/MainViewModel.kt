@@ -5,7 +5,6 @@ import android.net.Uri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.geometry.Rect
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import app.stickynotes.StickyApp
@@ -47,8 +46,6 @@ sealed interface Root {
 /** A message for the snackbar, optionally with Undo. */
 data class UiEvent(val message: String, val undo: (() -> Unit)? = null)
 
-/** A note being crumpled and thrown away, with where its card was on screen. */
-data class CrumpleJob(val note: Note, val bounds: Rect?)
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val container = (app as StickyApp).container
@@ -72,7 +69,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val _loaded = MutableStateFlow(false)
     val loaded: StateFlow<Boolean> = _loaded.asStateFlow()
 
-    /** Notes being crumpled or just trashed; hidden from the grid right away. */
+    /** Notes just sent to Trash; hidden from the grid right away. */
     private val _hiddenIds = MutableStateFlow<Set<Long>>(emptySet())
     val hiddenIds: StateFlow<Set<Long>> = _hiddenIds.asStateFlow()
 
@@ -89,12 +86,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         private set
 
     var searchQuery by mutableStateOf("")
-
-    var crumple by mutableStateOf<CrumpleJob?>(null)
-        private set
-
-    /** Where each visible card is on screen; used to start the crumple animation in place. */
-    val cardBounds = HashMap<Long, Rect>()
 
     private val _events = Channel<UiEvent>(Channel.BUFFERED)
     val events: Flow<UiEvent> = _events.receiveAsFlow()
@@ -193,14 +184,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Closes the editor and crumples the note's card; it goes to Trash when the animation ends. */
+    /** Closes the editor and moves the note to Trash, with Undo. */
     fun deleteFromEditor(draft: Note) {
         if (editorNoteId != draft.id) return
         editorNoteId = null
-        crumple?.let { crumpleFinished(it) }
-        _hiddenIds.update { it + draft.id }
-        crumple = CrumpleJob(draft, cardBounds[draft.id])
         viewModelScope.launch { repo.saveContent(draft) }
+        moveToTrash(draft.id)
     }
 
     fun copyFromEditor(draft: Note) {
@@ -211,11 +200,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             editorIsNew = false
             editorNoteId = newId
         }
-    }
-
-    fun crumpleFinished(job: CrumpleJob) {
-        if (crumple == job) crumple = null
-        moveToTrash(job.note.id)
     }
 
     // ---------------------------------------------------------------- Grid actions
@@ -234,13 +218,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { repo.setPinned(note.id, !note.isPinned) }
     }
 
-    /** The trash button on a card: crumple the card where it is, then move it to Trash. */
+    /** The trash button on a card: straight to Trash, with Undo. */
     fun deleteFromCard(note: Note) {
         if (note.id in _hiddenIds.value) return
-        // Deleting another note mid-animation: send the first one straight to Trash.
-        crumple?.let { crumpleFinished(it) }
-        _hiddenIds.update { it + note.id }
-        crumple = CrumpleJob(note, cardBounds[note.id])
+        moveToTrash(note.id)
     }
 
     fun reorder(orderedIds: List<Long>) {

@@ -21,7 +21,7 @@ Every push to `main` builds a signed APK on GitHub Actions and publishes it as a
 - Reminders with notifications, re-set automatically after a reboot or app update
 - Image attachments (photo picker, full-screen viewer with pinch zoom)
 - Send a note as text to any app; make a copy
-- Delete animation: the note crumples into a paper ball that falls, bounces and rolls with a shadow
+- Pin and delete buttons right on each note
 - Undo bar after delete or archive, duration adjustable in Settings (default 5 seconds)
 - Light, dark or follow-system theme
 
