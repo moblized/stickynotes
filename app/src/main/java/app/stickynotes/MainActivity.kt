@@ -15,6 +15,9 @@ class MainActivity : ComponentActivity() {
 
     private val viewModel: MainViewModel by lazy { ViewModelProvider(this)[MainViewModel::class.java] }
 
+    /** Whether the app is showing its dark theme, so the home-screen icon can match. */
+    private var darkTheme: Boolean? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -22,9 +25,18 @@ class MainActivity : ComponentActivity() {
         setContent {
             AppRoot(
                 vm = viewModel,
-                onDarkThemeChanged = { dark -> applySystemBars(dark) },
+                onDarkThemeChanged = { dark ->
+                    darkTheme = dark
+                    applySystemBars(dark)
+                },
             )
         }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // Switch to the dark (or light) app icon once the app is out of sight.
+        if (!isChangingConfigurations) darkTheme?.let { AppIcon.sync(this, it) }
     }
 
     override fun onNewIntent(intent: Intent) {
