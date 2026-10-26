@@ -175,6 +175,15 @@ fun SettingsScreen(vm: MainViewModel, onOpenDrawer: () -> Unit) {
             }
 
             Divider()
+            SectionTitle("Gemini & Google Assistant")
+            Tip(
+                "Say \"Hey Google, open Sticky voice note\", then say your note. It saves by itself. " +
+                    "Start with \"shopping list\" or \"to-do list\" for a checklist, and say \"and\" between items.",
+            )
+            Tip("In Gemini, tap Share under an answer and pick Sticky Notes. Bulleted lists become checklists.")
+            Tip("Select text in any app, then choose \"Add to Sticky Notes\" from the menu (it may be under ⋮).")
+
+            Divider()
             SectionTitle("S Pen")
             PenSection(vm)
 
@@ -314,6 +323,15 @@ private fun SwitchRow(
         Spacer(Modifier.width(12.dp))
         Switch(checked = checked, onCheckedChange = null, enabled = enabled)
     }
+}
+
+@Composable
+private fun Tip(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodyMedium,
+        modifier = Modifier.padding(horizontal = 24.dp, vertical = 5.dp),
+    )
 }
 
 @Composable

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Dark-mode version: dark note, light ink, for a black background. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:rotation="-6">
+        <path
+            android:fillColor="#33000000"
+            android:pathData="M33,35 L77,35 L77,67 L67,77 L33,77 Z" />
+        <path
+            android:fillColor="#FF6E6326"
+            android:pathData="M31,32 L75,32 L75,64 L64,75 L31,75 Z" />
+        <path
+            android:fillColor="#FF474018"
+            android:pathData="M64,75 L75,64 L64,64 Z" />
+        <!-- mic capsule -->
+        <path
+            android:fillColor="#FFF2EEE4"
+            android:pathData="M49,40 a4,4 0 0 1 8,0 L57,52 a4,4 0 0 1 -8,0 Z" />
+        <!-- mic cradle and stand -->
+        <path
+            android:strokeColor="#FFF2EEE4"
+            android:strokeWidth="2.6"
+            android:strokeLineCap="round"
+            android:fillColor="#00000000"
+            android:pathData="M44,49 a9,9 0 0 0 18,0 M53,58 L53,64 M48.5,64 L57.5,64" />
+    </group>
+</vector>

@@ -1,5 +1,6 @@
 package app.stickynotes.ui.home
 
+import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,6 +31,7 @@ import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.outlined.Menu
+import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.ViewAgenda
@@ -55,6 +57,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.input.ImeAction
@@ -66,6 +69,7 @@ import app.stickynotes.data.LabelEntity
 import app.stickynotes.data.Note
 import app.stickynotes.data.NoteImageEntity
 import app.stickynotes.data.NotesLayout
+import app.stickynotes.capture.VoiceNoteActivity
 import app.stickynotes.ui.MainViewModel
 import app.stickynotes.ui.NoteSection
 import app.stickynotes.ui.components.NoteCard
@@ -94,6 +98,7 @@ fun HomeScreen(
     val visible = remember(notes, hidden, section, query, labelsByNote) {
         filterNotes(notes, hidden, section, query, labelsByNote)
     }
+    val context = LocalContext.current
     val canReorder = query.isBlank() && (section is NoteSection.Notes || section is NoteSection.Label)
     val showFabs = section is NoteSection.Notes || section is NoteSection.Label
 
@@ -103,6 +108,11 @@ fun HomeScreen(
         floatingActionButton = {
             if (showFabs) {
                 Column(horizontalAlignment = Alignment.End) {
+                    SmallFloatingActionButton(
+                        onClick = { context.startActivity(Intent(context, VoiceNoteActivity::class.java)) },
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    ) { Icon(Icons.Outlined.Mic, contentDescription = "New voice note") }
+                    Spacer(Modifier.height(12.dp))
                     SmallFloatingActionButton(
                         onClick = { vm.newNote(isChecklist = true) },
                         containerColor = MaterialTheme.colorScheme.secondaryContainer,

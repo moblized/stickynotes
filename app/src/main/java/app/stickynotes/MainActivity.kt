@@ -15,7 +15,7 @@ class MainActivity : ComponentActivity() {
 
     private val viewModel: MainViewModel by lazy { ViewModelProvider(this)[MainViewModel::class.java] }
 
-    /** Whether the app is showing its dark theme, so the home-screen icon can match. */
+    /** The theme the app last showed; the app-drawer icons follow it when the app goes to the background. */
     private var darkTheme: Boolean? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -35,8 +35,12 @@ class MainActivity : ComponentActivity() {
 
     override fun onStop() {
         super.onStop()
-        // Switch to the dark (or light) app icon once the app is out of sight.
-        if (!isChangingConfigurations) darkTheme?.let { AppIcon.sync(this, it) }
+        // Switch the app-drawer icons to match the theme once the app is out of sight
+        // (switching while it's on screen can close it on some phones).
+        if (isChangingConfigurations) return
+        val dark = darkTheme ?: return
+        val appContext = applicationContext
+        Thread { runCatching { LauncherIcons.apply(appContext, dark) } }.start()
     }
 
     override fun onNewIntent(intent: Intent) {

@@ -24,6 +24,8 @@ Every push to `main` builds a signed APK on GitHub Actions and publishes it as a
 - Pin and delete buttons right on each note
 - "Quick note" icon and long-press shortcuts (New note, New list) that open straight into a blank note
 - S Pen helper (optional, Accessibility): pulling out the S Pen opens a new note, or Sticky Notes can open in place of Samsung Notes
+- Gemini & Google Assistant: "Hey Google, open Sticky voice note" saves a spoken note or list; share any Gemini answer to Sticky Notes; "Add to Sticky Notes" in the text-selection menu
+- App icons switch to dark versions when the app is in dark mode
 - Undo bar after delete or archive, duration adjustable in Settings (default 5 seconds)
 - Light, dark or follow-system theme, with an optional pure black dark mode
 

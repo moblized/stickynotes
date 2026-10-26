@@ -47,6 +47,22 @@ class NotesRepository(
         return id
     }
 
+    /** A finished note from voice or a share: text or checklist, plus any shared images. Returns its id. */
+    suspend fun createFrom(draft: NoteDraft, images: List<Uri> = emptyList()): Long {
+        val isChecklist = draft.items.isNotEmpty()
+        val id = create(isChecklist = isChecklist)
+        val note = noteDao.get(id) ?: return id
+        saveContent(
+            note.copy(
+                title = draft.title,
+                body = draft.body,
+                items = draft.items.map { ChecklistItem(text = it) },
+            ),
+        )
+        if (images.isNotEmpty()) addImages(id, images)
+        return id
+    }
+
     /** Saves editor content. Bumps "edited" time only when the text, list or color changed. */
     suspend fun saveContent(note: Note) = saveLock.withLock {
         val old = noteDao.get(note.id) ?: return@withLock
