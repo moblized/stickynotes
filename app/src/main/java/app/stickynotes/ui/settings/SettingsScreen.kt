@@ -44,6 +44,14 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import kotlinx.coroutines.launch
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -184,6 +192,10 @@ fun SettingsScreen(vm: MainViewModel, onOpenDrawer: () -> Unit) {
             Tip("Select text in any app, then choose \"Add to Sticky Notes\" from the menu (it may be under ⋮).")
 
             Divider()
+            SectionTitle("Mealie")
+            MealieSection(vm)
+
+            Divider()
             SectionTitle("S Pen")
             PenSection(vm)
 
@@ -197,6 +209,114 @@ fun SettingsScreen(vm: MainViewModel, onOpenDrawer: () -> Unit) {
                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp),
             )
         }
+    }
+}
+
+/** Connect a Mealie server; its shopping lists become checklist notes that sync both ways. */
+@Composable
+private fun MealieSection(vm: MainViewModel) {
+    val state by vm.mealieState.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
+
+    if (!state.connected) {
+        var address by rememberSaveable { mutableStateOf(state.address) }
+        var token by rememberSaveable { mutableStateOf("") }
+        var busy by remember { mutableStateOf(false) }
+        var error by remember { mutableStateOf<String?>(null) }
+        Column(Modifier.padding(horizontal = 24.dp)) {
+            Text(
+                text = "Bring your Mealie shopping lists in as checklists. Add, tick or remove items in " +
+                    "either app and the other catches up.",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Spacer(Modifier.height(12.dp))
+            OutlinedTextField(
+                value = address,
+                onValueChange = { address = it; error = null },
+                label = { Text("Mealie address") },
+                placeholder = { Text("https://mealie.example.com") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(8.dp))
+            OutlinedTextField(
+                value = token,
+                onValueChange = { token = it; error = null },
+                label = { Text("API token") },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = "To get a token: in Mealie, tap your profile picture → API Tokens, give it a name " +
+                    "such as Sticky Notes, then Generate and copy it here.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(10.dp))
+            Button(
+                enabled = !busy && address.isNotBlank() && token.isNotBlank(),
+                onClick = {
+                    busy = true
+                    error = null
+                    scope.launch {
+                        error = vm.connectMealie(address, token)
+                        busy = false
+                        if (error == null) token = ""
+                    }
+                },
+            ) { Text(if (busy) "Connecting…" else "Connect") }
+            error?.let {
+                Spacer(Modifier.height(6.dp))
+                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+            }
+        }
+        return
+    }
+
+    Column(Modifier.padding(horizontal = 24.dp)) {
+        val host = state.address.substringAfter("://").substringBefore('/')
+        Text(
+            text = "Connected to $host" + if (state.userName.isNotBlank()) " as ${state.userName}" else "",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        val error = state.lastError
+        Text(
+            text = when {
+                state.syncing -> "Syncing…"
+                error != null -> "Last sync didn't work: $error"
+                state.lastSyncAt > 0 -> "Last synced ${formatReminder(state.lastSyncAt)}. Checks every 30 seconds while the app is open, and every 15 minutes in the background."
+                else -> "Not synced yet."
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = if (error != null && !state.syncing) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+    if (state.lists.isEmpty()) {
+        Text(
+            text = "No shopping lists in Mealie yet.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 6.dp),
+        )
+    }
+    state.lists.forEach { list ->
+        SwitchRow(
+            title = list.name,
+            detail = if (list.enabled) "Synced with a checklist note (label: Mealie)" else "Not synced. Trashing its note also turns this off.",
+            checked = list.enabled,
+            enabled = true,
+            onCheckedChange = { vm.setMealieListEnabled(list.listId, it) },
+        )
+    }
+    Row(Modifier.padding(horizontal = 24.dp, vertical = 6.dp)) {
+        Button(onClick = { vm.syncMealieNow() }, enabled = !state.syncing) { Text("Sync now") }
+        Spacer(Modifier.width(8.dp))
+        OutlinedButton(onClick = { vm.disconnectMealie() }) { Text("Disconnect") }
     }
 }
 

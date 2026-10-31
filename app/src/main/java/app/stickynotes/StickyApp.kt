@@ -7,6 +7,9 @@ import app.stickynotes.data.AppDatabase
 import app.stickynotes.data.ImageStore
 import app.stickynotes.data.NotesRepository
 import app.stickynotes.data.Settings
+import app.stickynotes.data.mealie.MealieStore
+import app.stickynotes.data.mealie.MealieSync
+import app.stickynotes.data.mealie.MealieSyncWorker
 import app.stickynotes.reminders.Notifications
 import app.stickynotes.reminders.ReminderScheduler
 
@@ -18,6 +21,7 @@ class StickyApp : Application() {
         super.onCreate()
         container = AppContainer(this)
         Notifications.createChannel(this)
+        if (container.mealieStore.isConnected) MealieSyncWorker.schedule(this)
     }
 }
 
@@ -33,4 +37,7 @@ class AppContainer(context: Context) {
         images = ImageStore(context),
         reminders = ReminderScheduler(context),
     )
+
+    val mealieStore = MealieStore(context)
+    val mealieSync = MealieSync(mealieStore, repository)
 }

@@ -47,6 +47,14 @@ class NotesRepository(
         return id
     }
 
+    /** An empty checklist for a Mealie shopping list, labelled "Mealie". Returns its id. */
+    suspend fun createMealieChecklist(title: String): Long {
+        val id = create(isChecklist = true)
+        noteDao.get(id)?.let { saveContent(it.copy(title = title, items = emptyList())) }
+        getOrCreateLabel("Mealie")?.let { setNoteLabel(id, it.id, attached = true) }
+        return id
+    }
+
     /** A finished note from voice or a share: text or checklist, plus any shared images. Returns its id. */
     suspend fun createFrom(draft: NoteDraft, images: List<Uri> = emptyList()): Long {
         val isChecklist = draft.items.isNotEmpty()

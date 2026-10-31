@@ -33,8 +33,14 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        viewModel.onAppVisible()
+    }
+
     override fun onStop() {
         super.onStop()
+        viewModel.onAppHidden()
         // Switch the app-drawer icons to match the theme once the app is out of sight
         // (switching while it's on screen can close it on some phones).
         if (isChangingConfigurations) return

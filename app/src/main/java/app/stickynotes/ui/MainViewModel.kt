@@ -15,6 +15,10 @@ import app.stickynotes.data.NoteImageEntity
 import app.stickynotes.data.NotesLayout
 import app.stickynotes.data.Settings
 import app.stickynotes.data.ThemeMode
+import app.stickynotes.data.mealie.MealieClient
+import app.stickynotes.data.mealie.MealieException
+import app.stickynotes.data.mealie.MealieState
+import app.stickynotes.data.mealie.MealieSyncWorker
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,7 +29,12 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** What the main grid is showing. */
 sealed interface NoteSection {
@@ -78,8 +87,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var root by mutableStateOf<Root>(Root.Section(NoteSection.Notes))
         private set
 
-    var editorNoteId by mutableStateOf<Long?>(null)
-        private set
+    private var _editorNoteId by mutableStateOf<Long?>(null)
+
+    /** The note open in the editor, or null. */
+    val editorNoteId: Long? get() = _editorNoteId
 
     /** True when the open note was just created, so the editor puts the cursor in it. */
     var editorIsNew by mutableStateOf(false)
@@ -96,6 +107,90 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             _loaded.value = true
         }
         viewModelScope.launch { repo.cleanUp() }
+    }
+
+    // ---------------------------------------------------------------- Mealie
+
+    private val mealieStore = container.mealieStore
+    private val mealieSync = container.mealieSync
+    val mealieState: StateFlow<MealieState> = mealieStore.state
+    private var pollJob: Job? = null
+
+    /**
+     * Changes the open note. Mealie sync leaves an open note alone; after it closes,
+     * sync waits until its last save has landed, then pushes your changes.
+     */
+    private fun openEditor(id: Long?) {
+        val previous = _editorNoteId
+        _editorNoteId = id
+        if (id != null) mealieSync.hold(id)
+        if (previous != null && previous != id) {
+            viewModelScope.launch {
+                delay(1_500)
+                if (_editorNoteId != previous) {
+                    mealieSync.release(previous)
+                    if (previous in mealieSync.linkedNoteIds()) mealieSync.syncNow()
+                }
+            }
+        }
+    }
+
+    /** While the app is on screen, check Mealie every 30 seconds. */
+    fun onAppVisible() {
+        if (pollJob?.isActive == true) return
+        pollJob = viewModelScope.launch {
+            while (isActive) {
+                if (mealieStore.isConnected) mealieSync.syncNow()
+                delay(30_000)
+            }
+        }
+    }
+
+    fun onAppHidden() {
+        pollJob?.cancel()
+        pollJob = null
+    }
+
+    /** Returns an error message, or null when connected. */
+    suspend fun connectMealie(address: String, token: String): String? = withContext(Dispatchers.IO) {
+        val client = MealieClient(address, token.trim())
+        try {
+            val name = client.whoAmI()
+            client.lists()
+            mealieStore.connect(client.root, token.trim(), name)
+            MealieSyncWorker.schedule(getApplication())
+            viewModelScope.launch { mealieSync.syncNow() }
+            null
+        } catch (e: MealieException) {
+            e.message
+        } catch (e: Exception) {
+            "Couldn't connect (${e.javaClass.simpleName})."
+        }
+    }
+
+    fun disconnectMealie() {
+        MealieSyncWorker.cancel(getApplication())
+        mealieStore.disconnect()
+    }
+
+    fun syncMealieNow() {
+        viewModelScope.launch { mealieSync.syncNow() }
+    }
+
+    /** Switching a list back on after its note was trashed or deleted starts a fresh note. */
+    fun setMealieListEnabled(listId: String, enabled: Boolean) {
+        viewModelScope.launch {
+            val link = mealieStore.links().firstOrNull { it.listId == listId } ?: return@launch
+            var updated = link.copy(enabled = enabled)
+            if (enabled) {
+                val note = link.noteId?.let { repo.get(it) }
+                if (note == null || note.deletedAt != null) {
+                    updated = updated.copy(noteId = null, map = emptyMap(), base = emptyMap(), baseTitle = "")
+                }
+            }
+            mealieStore.saveLinks(mealieStore.links().map { if (it.listId == listId) updated else it })
+            if (enabled) mealieSync.syncNow()
+        }
     }
 
     private fun emit(message: String, undo: (() -> Unit)? = null) {
@@ -124,7 +219,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun openNote(id: Long) {
         editorIsNew = false
-        editorNoteId = id
+        openEditor(id)
     }
 
     fun openFromNotification(id: Long) {
@@ -132,7 +227,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             val note = repo.get(id) ?: return@launch
             if (note.deletedAt != null) return@launch
             editorIsNew = false
-            editorNoteId = id
+            openEditor(id)
         }
     }
 
@@ -141,7 +236,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             val id = repo.create(isChecklist, labelId)
             editorIsNew = true
-            editorNoteId = id
+            openEditor(id)
         }
     }
 
@@ -161,7 +256,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Closes the editor without saving, e.g. when its note no longer exists. */
     fun dismissEditor(id: Long) {
-        if (editorNoteId == id) editorNoteId = null
+        if (editorNoteId == id) openEditor(null)
     }
 
     // ---------------------------------------------------------------- Editor
@@ -173,7 +268,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     /** Saves and closes. Throws away notes that ended up empty, like Keep. */
     fun closeEditor(draft: Note) {
         if (editorNoteId != draft.id) return
-        editorNoteId = null
+        openEditor(null)
         viewModelScope.launch {
             repo.saveContent(draft)
             if (repo.isEmpty(draft.id)) {
@@ -185,7 +280,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun archiveFromEditor(draft: Note) {
         if (editorNoteId != draft.id) return
-        editorNoteId = null
+        openEditor(null)
         viewModelScope.launch {
             repo.saveContent(draft)
             val archive = !draft.isArchived
@@ -199,7 +294,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     /** Closes the editor and moves the note to Trash, with Undo. */
     fun deleteFromEditor(draft: Note) {
         if (editorNoteId != draft.id) return
-        editorNoteId = null
+        openEditor(null)
         viewModelScope.launch { repo.saveContent(draft) }
         moveToTrash(draft.id)
     }
@@ -210,7 +305,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             repo.saveContent(draft)
             val newId = repo.copy(draft.id) ?: return@launch
             editorIsNew = false
-            editorNoteId = newId
+            openEditor(newId)
         }
     }
 
